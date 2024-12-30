@@ -1,30 +1,28 @@
-# Use Python 3.9 slim image as base
 FROM python:3.9-slim
 
-# Install system dependencies including python3-distutils
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    python3-distutils \
-    python3-dev \
-    build-essential \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+# Install system dependencies
+RUN apt-get update -q && \
+    apt-get install -y \
+    chromium-chromedriver \
+    chromium \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy chromedriver to the correct location
+RUN cp /usr/lib/chromium/chromedriver /usr/bin
 
 # Set working directory
 WORKDIR /app
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy the application
 COPY . .
 
 # Set environment variables
+ENV PYTHONUNBUFFERED=1
 ENV STREAMLIT_SERVER_PORT=8501
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 
