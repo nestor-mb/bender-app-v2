@@ -1,0 +1,5 @@
+streamlit>=1.28.0
+selenium>=4.15.2
+webdriver-manager>=4.0.1
+Pillow>=10.1.0
+pandas>=2.1.3
