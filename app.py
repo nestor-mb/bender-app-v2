@@ -13,7 +13,6 @@ from io import StringIO
 import validators
 from urllib.parse import urlparse
 import time
-import os
 from functools import lru_cache
 
 # Configure the page
@@ -48,7 +47,6 @@ if 'driver' not in st.session_state:
     st.session_state.driver = None
 if 'cache' not in st.session_state:
     st.session_state.cache = {}
-
 
 def generate_cache_key(url, width, height):
     """Generate a unique cache key based on URL and dimensions"""
@@ -108,12 +106,10 @@ def validate_url(url):
 def wait_for_page_load(driver, timeout=10):
     """Wait for page to load using WebDriverWait instead of time.sleep"""
     try:
-        # Wait for document.readyState to be 'complete'
         WebDriverWait(driver, timeout).until(
             lambda d: d.execute_script('return document.readyState') == 'complete'
         )
         
-        # Wait for any loading indicators to disappear (customize selectors based on your needs)
         loading_selectors = [
             "div.loading",
             "#loader",
@@ -127,10 +123,9 @@ def wait_for_page_load(driver, timeout=10):
                     EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                 )
             except:
-                continue  # Skip if selector is not found
+                continue
                 
-        # Additional wait for any dynamic content
-        time.sleep(1)  # Minimal safety delay
+        time.sleep(1)
         
     except Exception as e:
         st.warning(f"Page load wait warning: {str(e)}")
@@ -138,7 +133,6 @@ def wait_for_page_load(driver, timeout=10):
 def handle_cookies_banner(driver):
     """Handle cookie banners with improved waiting mechanism"""
     try:
-        # Common selectors for cookie banners and accept buttons
         cookie_selectors = [
             ("div#cookie-banner", "button#accept-cookies"),
             (".cookie-banner", ".accept-cookies"),
@@ -148,35 +142,30 @@ def handle_cookies_banner(driver):
         
         for banner_selector, accept_selector in cookie_selectors:
             try:
-                # Wait for banner with shorter timeout
                 banner = WebDriverWait(driver, 3).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, banner_selector))
                 )
                 
-                # Find and click accept button
                 accept_button = banner.find_element(By.CSS_SELECTOR, accept_selector)
                 accept_button.click()
                 
-                # Wait for banner to disappear
                 WebDriverWait(driver, 3).until_not(
                     EC.presence_of_element_located((By.CSS_SELECTOR, banner_selector))
                 )
-                break  # Exit loop if successful
+                break
                 
             except:
-                continue  # Try next selector pair
+                continue
                 
     except Exception as e:
         st.warning(f"Cookie banner handling warning: {str(e)}")
 
 def capture_full_page_screenshot(url, width, height):
     """Capture screenshot with improved error handling and caching"""
-    # Check cache first
     cache_key = generate_cache_key(url, width, height)
     if cache_key in st.session_state.cache:
         return st.session_state.cache[cache_key]
 
-    # Validate URL
     is_valid, message = validate_url(url)
     if not is_valid:
         st.error(message)
@@ -189,23 +178,18 @@ def capture_full_page_screenshot(url, width, height):
         if not st.session_state.driver:
             return None
 
-        # Configure window size
         st.session_state.driver.set_window_size(width, height)
 
         with st.status("Processing screenshot...") as status:
-            # Navigate to page
             status.update(label="Navigating to page...")
             st.session_state.driver.get(url)
 
-            # Wait for page load
             status.update(label="Waiting for page to load...")
             wait_for_page_load(st.session_state.driver)
 
-            # Handle cookie banners
             status.update(label="Handling cookie notices...")
             handle_cookies_banner(st.session_state.driver)
 
-            # Get page dimensions
             status.update(label="Calculating page dimensions...")
             total_height = st.session_state.driver.execute_script("""
                 return Math.max(
@@ -216,15 +200,12 @@ def capture_full_page_screenshot(url, width, height):
                 );
             """)
 
-            # Update viewport if necessary
             if total_height > height:
                 st.session_state.driver.set_window_size(width, total_height)
 
-            # Capture screenshot
             status.update(label="Capturing screenshot...")
             screenshot = st.session_state.driver.get_screenshot_as_png()
 
-            # Cache the result
             st.session_state.cache[cache_key] = screenshot
             
             status.update(label="Done!", state="complete")
@@ -239,12 +220,10 @@ def process_multiple_urls_concurrent(urls, width, height):
     results = []
     total_urls = len(urls)
     
-    # Create progress tracking
     progress_bar = st.progress(0)
     status_text = st.empty()
     
     def process_single_url(url):
-        """Helper function to process a single URL"""
         try:
             screenshot = capture_full_page_screenshot(url, width, height)
             return {
@@ -259,12 +238,9 @@ def process_multiple_urls_concurrent(urls, width, height):
                 'status': f'Failed: {str(e)}'
             }
 
-    # Use ThreadPoolExecutor for concurrent processing
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        # Submit all URLs for processing
         future_to_url = {executor.submit(process_single_url, url): url for url in urls}
         
-        # Process results as they complete
         for idx, future in enumerate(concurrent.futures.as_completed(future_to_url)):
             url = future_to_url[future]
             try:
@@ -277,7 +253,6 @@ def process_multiple_urls_concurrent(urls, width, height):
                     'status': f'Failed: {str(e)}'
                 })
             
-            # Update progress
             progress = (idx + 1) / total_urls
             progress_bar.progress(progress)
             status_text.text(f"Processed {idx + 1} of {total_urls} URLs")
@@ -294,9 +269,124 @@ def cleanup_resources():
     except Exception as e:
         st.warning(f"Error during cleanup: {str(e)}")
     
-    # Clear cache if it's too large (adjust threshold as needed)
     if len(st.session_state.cache) > 100:
         st.session_state.cache.clear()
+
+def show_instructions():
+    """Display application instructions"""
+    with st.expander("📖 How to use this app"):
+        st.markdown("""
+        ### Quick Guide
+        1. **Input URLs**
+           - Single URL: Enter directly in the text field
+           - Multiple URLs: Upload file or paste list
+           - Supported formats: Direct URL, CSV, or TXT files
+        
+        2. **Resolution Options**
+           - Choose from preset device sizes
+           - Set custom dimensions
+           - Supports responsive design testing
+        
+        3. **Processing**
+           - Single URLs process immediately
+           - Multiple URLs process concurrently
+           - Progress tracking available
+        
+        4. **Results**
+           - Preview screenshots in-app
+           - Download individual images
+           - Batch download available
+        
+        ### Tips
+        - Ensure URLs include 'http://' or 'https://'
+        - Large pages may take longer to process
+        - Clear cache if experiencing issues
+        """)
+
+def get_resolution_settings():
+    """Handle resolution and device settings"""
+    device_presets = {
+        "Desktop (1920x1080)": (1920, 1080),
+        "Laptop (1366x768)": (1366, 768),
+        "Tablet Landscape (1024x768)": (1024, 768),
+        "Tablet Portrait (768x1024)": (768, 1024),
+        "Mobile Large (414x896)": (414, 896),
+        "Mobile Medium (375x812)": (375, 812),
+        "Mobile Small (320x568)": (320, 568),
+    }
+
+    resolution_method = st.radio(
+        "Select Screen Size",
+        ["📱 Preset Devices", "🔧 Custom Dimensions"]
+    )
+
+    if resolution_method == "📱 Preset Devices":
+        selected_preset = st.selectbox(
+            "Choose Device",
+            list(device_presets.keys())
+        )
+        width, height = device_presets[selected_preset]
+        st.info(f"Selected dimensions: {width}x{height}px")
+    else:
+        col1, col2 = st.columns(2)
+        with col1:
+            width = st.number_input("Width (px)", 
+                                  min_value=320, 
+                                  max_value=3840, 
+                                  value=1920)
+        with col2:
+            height = st.number_input("Height (px)", 
+                                   min_value=320, 
+                                   max_value=2160, 
+                                   value=1080)
+
+    return width, height
+
+def process_multiple_urls():
+    """Handle multiple URL inputs"""
+    st.subheader("Multiple URLs Input")
+    
+    input_method = st.radio(
+        "Choose input method",
+        ["📝 Enter URLs manually", "📁 Upload File", "📋 Paste multiple URLs"]
+    )
+    
+    urls = []
+    if input_method == "📝 Enter URLs manually":
+        num_urls = st.number_input("Number of URLs", 
+                                 min_value=1, 
+                                 max_value=10, 
+                                 value=1)
+        for i in range(num_urls):
+            url = st.text_input(f"URL {i+1}", 
+                              key=f"url_{i}",
+                              placeholder="https://example.com")
+            if url:
+                urls.append(url)
+                
+    elif input_method == "📁 Upload File":
+        uploaded_file = st.file_uploader(
+            "Upload CSV or TXT file with URLs (one per line)",
+            type=['csv', 'txt']
+        )
+        if uploaded_file:
+            content = uploaded_file.getvalue().decode()
+            urls = [url.strip() for url in content.split('\n') 
+                   if url.strip() and validate_url(url.strip())[0]]
+            
+    else:  # Paste multiple URLs
+        url_text = st.text_area(
+            "Paste multiple URLs (one per line)",
+            height=150
+        )
+        if url_text:
+            urls = [url.strip() for url in url_text.split('\n') 
+                   if url.strip() and validate_url(url.strip())[0]]
+    
+    if urls:
+        st.info(f"Found {len(urls)} valid URLs")
+    
+    return urls
 
 def display_results(results):
     """Display screenshot results with download options"""
@@ -329,8 +419,6 @@ def display_results(results):
         for result in failed:
             st.error(f"❌ {result['url']}: {result['status']}")
 
-### 5. Final Block - Main Function and App Execution
-```python
 def main():
     """Main application function"""
     st.title("🖼️ Website Screenshot Generator")
