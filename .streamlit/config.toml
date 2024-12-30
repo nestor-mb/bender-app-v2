@@ -1,2 +1,9 @@
 [server]
 runOnSave = false  # Desactiva la detección automática de cambios para reducir el uso de inotify
+
+[server]
+enableCORS = false
+
+[browser]
+serverAddress = "0.0.0.0"
+serverPort = 8501
