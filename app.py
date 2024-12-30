@@ -58,9 +58,11 @@ def cache_screenshot(cache_key, screenshot):
     return screenshot
 
 def setup_webdriver():
-    """Setup and configure WebDriver with optimized settings"""
+    """Setup and configure WebDriver with improved version compatibility"""
     try:
-        chrome_options = Options()
+        import undetected_chromedriver as uc
+        
+        chrome_options = uc.ChromeOptions()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
@@ -68,19 +70,18 @@ def setup_webdriver():
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--window-size=1920x1080")
         chrome_options.add_argument("--start-maximized")
-        chrome_options.add_argument("--disable-notifications")
         
-        # Add performance optimization arguments
-        chrome_options.add_argument("--disable-javascript-harmony-shipping")
-        chrome_options.add_argument("--disable-dev-tools")
-        chrome_options.add_argument("--no-first-run")
-        chrome_options.add_argument("--no-default-browser-check")
+        # Create driver with undetected-chromedriver
+        driver = uc.Chrome(options=chrome_options)
         
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
     except Exception as e:
         st.error(f"Error configuring WebDriver: {str(e)}")
+        # Add helpful error message for users
+        st.info("""
+        If you're seeing this error, please ensure you have Google Chrome installed.
+        The application will automatically handle driver compatibility.
+        """)
         return None
 
 def validate_url(url):
