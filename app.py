@@ -5,14 +5,26 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-# Configuración de la página
+# Configure the page
 st.set_page_config(
-    page_title="Generador de Capturas de Pantalla de Sitios Web",
+    page_title="Website Screenshot Generator",
     page_icon="📸",
     layout="wide"
 )
 
-# Inicializar el estado de la sesión para el driver
+# Custom CSS for better styling
+st.markdown("""
+    <style>
+    .reportview-container {
+        background: #f0f2f6;
+    }
+    .sidebar .sidebar-content {
+        background: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Initialize session state for the driver
 if 'driver' not in st.session_state:
     st.session_state.driver = None
 
@@ -24,16 +36,33 @@ def setup_webdriver():
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.binary_location = "/usr/bin/chromium-browser"  # Specify the Chromium binary location
-        
+        chrome_options.add_argument("--window-size=1920x1080")  # Set a large window size for full-page screenshot
+
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
     except Exception as e:
-        st.error(f"Error al configurar WebDriver: {str(e)}")
+        st.error(f"Error configuring WebDriver: {str(e)}")
         return None
 
-def capture_screenshot(url, width=1920, height=1080):
+def handle_cookies_banner(driver):
+    try:
+        # Example selectors for the cookies banner and accept button
+        cookies_banner_selector = "div#cookie-banner"  # Update this selector based on the actual site
+        accept_button_selector = "button#accept-cookies"  # Update this selector based on the actual site
+        
+        # Wait for the cookies banner to appear
+        time.sleep(2)
+        banner = driver.find_element_by_css_selector(cookies_banner_selector)
+        accept_button = driver.find_element_by_css_selector(accept_button_selector)
+        
+        if banner and accept_button:
+            accept_button.click()
+            time.sleep(1)  # Wait for the banner to disappear
+    except Exception as e:
+        st.warning(f"Could not handle cookies banner: {str(e)}")
+
+def capture_full_page_screenshot(url):
     try:
         if st.session_state.driver is None:
             st.session_state.driver = setup_webdriver()
@@ -41,66 +70,55 @@ def capture_screenshot(url, width=1920, height=1080):
         if not st.session_state.driver:
             return None
 
-        # Establecer el tamaño de la ventana
-        st.session_state.driver.set_window_size(width, height)
-        
-        # Navegar a la URL
+        # Navigate to the URL
         st.session_state.driver.get(url)
         
-        # Esperar a que la página cargue
+        # Handle cookies banner
+        handle_cookies_banner(st.session_state.driver)
+        
+        # Wait for the page to load
         time.sleep(3)
         
-        # Tomar captura de pantalla
+        # Get the total height of the page
+        total_height = st.session_state.driver.execute_script("return document.body.scrollHeight")
+        st.session_state.driver.set_window_size(1920, total_height)
+
+        # Take a screenshot
         screenshot = st.session_state.driver.get_screenshot_as_png()
         return screenshot
 
     except Exception as e:
-        st.error(f"Error al capturar la captura de pantalla: {str(e)}")
+        st.error(f"Error capturing screenshot: {str(e)}")
         return None
 
 def main():
-    st.title("Generador de Capturas de Pantalla de Sitios Web")
-    st.write("Genera capturas de pantalla de cualquier sitio web")
+    st.title("Website Screenshot Generator")
+    st.write("Generate full-page screenshots of any website quickly and easily.")
 
-    # Entrada de URL
-    url = st.text_input(
-        "Ingrese la URL del sitio web",
-        placeholder="https://ejemplo.com"
-    )
+    with st.form(key='screenshot_form'):
+        url = st.text_input("Enter the website URL", placeholder="https://example.com")
+        resolution = st.selectbox("Select resolution", ["Desktop (1920x1080)", "Tablet (768x1024)", "Mobile (375x812)"])
+        submit_button = st.form_submit_button(label='Generate Screenshot')
 
-    # Selección de resolución
-    resolutions = {
-        "Escritorio (1920x1080)": (1920, 1080),
-        "Tablet (768x1024)": (768, 1024),
-        "Móvil (375x812)": (375, 812)
-    }
-    
-    resolution = st.selectbox(
-        "Seleccione la resolución",
-        list(resolutions.keys())
-    )
-
-    if st.button("Generar Captura"):
+    if submit_button:
         if not url:
-            st.error("Por favor, ingrese una URL")
+            st.error("Please enter a URL.")
             return
 
         if not url.startswith(('http://', 'https://')):
-            st.error("Por favor, ingrese una URL válida que comience con http:// o https://")
+            st.error("Please enter a valid URL starting with http:// or https://")
             return
 
-        with st.spinner("Generando captura de pantalla..."):
-            width, height = resolutions[resolution]
-            screenshot = capture_screenshot(url, width, height)
+        with st.spinner("Generating full-page screenshot..."):
+            screenshot = capture_full_page_screenshot(url)
             
             if screenshot:
-                st.success("¡Captura de pantalla generada con éxito!")
+                st.success("Screenshot generated successfully!")
                 st.image(screenshot, use_column_width=True)
                 
-                # Botón de descarga
-                filename = f"captura_{width}x{height}.png"
+                filename = "full_page_screenshot.png"
                 st.download_button(
-                    label="Descargar Captura",
+                    label="Download Screenshot",
                     data=screenshot,
                     file_name=filename,
                     mime="image/png"
@@ -110,8 +128,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        st.error(f"Ocurrió un error: {str(e)}")
+        st.error(f"An error occurred: {str(e)}")
     finally:
-        # Limpiar el driver cuando se cierra la aplicación
         if st.session_state.driver:
             st.session_state.driver.quit()
