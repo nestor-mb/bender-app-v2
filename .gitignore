@@ -169,3 +169,34 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Entornos virtuales
+env/
+venv/
+
+# Archivos de Python compilados
+__pycache__/
+*.pyc
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de Jupyter Notebook
+*.ipynb_checkpoints/
+
+# Datos y archivos grandes
+data/
+*.csv
+*.xlsx
+
+# Otros archivos temporales
+*.tmp
+*.log
+
+# Credenciales y variables de entorno
+.env
+.streamlit/secrets.toml
+
+# Directorios de dependencias (si usas Node.js, por ejemplo)
+node_modules/
