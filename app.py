@@ -1,181 +1,296 @@
 import streamlit as st
-import os
 import time
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import validators
+from datetime import datetime
+import pandas as pd
+import zipfile
 from urllib.parse import urlparse
-import concurrent.futures
 
-# Configure the page
+# Page Configuration
 st.set_page_config(
-    page_title="Website Screenshot Generator",
-    page_icon="📸",
-    layout="wide"
+    page_title="Screenshot Generator Pro",
+    page_icon="🖼️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Constants for resolutions
-RESOLUTIONS = {
-    "Desktop (1920x1080)": (1920, 1080),
-    "Tablet (768x1024)": (768, 1024),
-    "Mobile (375x812)": (375, 812)
-}
+# Custom CSS
+st.markdown("""
+    <style>
+    /* Main container */
+    .main {
+        padding: 2rem;
+    }
+    
+    /* Headers */
+    h1 {
+        color: #1E88E5;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    /* User info box */
+    .user-info {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    /* Input fields */
+    .stTextInput > div > div > input {
+        border-radius: 0.5rem;
+    }
+    
+    /* Select boxes */
+    .stSelectbox > div > div > div {
+        border-radius: 0.5rem;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        border-radius: 0.5rem;
+        background-color: #1E88E5;
+        color: white;
+        border: none;
+        padding: 0.5rem 2rem;
+        font-weight: 500;
+        width: 100%;
+    }
+    
+    .stButton > button:hover {
+        background-color: #1976D2;
+        border: none;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        padding: 1rem 2rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #1E88E5;
+        color: white;
+    }
+    
+    /* Progress bar */
+    .stProgress > div > div {
+        background-color: #1E88E5;
+    }
+    
+    /* Error messages */
+    .stAlert {
+        border-radius: 0.5rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+def validate_url(url):
+    """Validate URL with user feedback"""
+    if not url:
+        st.warning("⚠️ Please enter a URL")
+        return False
+    if not url.startswith(('http://', 'https://')):
+        st.warning("⚠️ URL must start with http:// or https://")
+        return False
+    if not validators.url(url):
+        st.error("❌ Invalid URL format")
+        return False
+    return True
 
 def setup_webdriver():
-    """Setup and configure Chrome WebDriver"""
+    """Configure and return Chrome WebDriver"""
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
     
     try:
         driver = webdriver.Chrome(options=chrome_options)
         return driver
     except Exception as e:
-        st.error(f"Error configuring WebDriver: {str(e)}")
+        st.error(f"❌ Error configuring WebDriver: {str(e)}")
         return None
 
-def capture_screenshot(url, width, height):
-    """Capture screenshot of a URL"""
-    driver = setup_webdriver()
-    if not driver:
-        return None
+def capture_screenshot(url, width, height, options):
+    """Capture screenshot with retry logic"""
+    start_time = time.time()
+    max_retries = 3
     
-    try:
-        driver.set_window_size(width, height)
-        driver.get(url)
-
-        # Wait for page load
-        time.sleep(3)
-
-        # Handle cookies pop-up if present
+    for attempt in range(max_retries):
         try:
-            cookie_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, 
-                    "//button[contains(text(), 'Aceptar') or "
-                    "contains(text(), 'Aceptar todas') or "
-                    "contains(text(), 'Agree') or "
-                    "contains(text(), 'Accept')]"))
-            )
-            cookie_button.click()
-            time.sleep(2)
-        except Exception:
-            pass
+            driver = setup_webdriver()
+            if not driver:
+                return None, time.time() - start_time
 
-        # Adjust window size for full page
-        total_height = driver.execute_script("return document.body.scrollHeight")
-        driver.set_window_size(width, total_height)
+            driver.set_window_size(width, height)
+            driver.get(url)
+
+            # Wait for page load
+            time.sleep(options.get('wait_time', 3))
+
+            # Handle cookie banners
+            if options.get('hide_cookie_banners', True):
+                try:
+                    cookie_buttons = WebDriverWait(driver, 5).until(
+                        EC.presence_of_all_elements_located((By.XPATH, 
+                            "//button[contains(text(), 'Accept') or contains(text(), 'Agree')]"
+                        ))
+                    )
+                    for button in cookie_buttons:
+                        driver.execute_script("arguments[0].click();", button)
+                except:
+                    pass
+
+            # Take screenshot
+            screenshot = driver.get_screenshot_as_png()
+            driver.quit()
+            return screenshot, time.time() - start_time
+
+        except Exception as e:
+            if driver:
+                driver.quit()
+            if attempt == max_retries - 1:
+                st.error(f"❌ Failed after {max_retries} attempts: {str(e)}")
+                return None, time.time() - start_time
+            time.sleep(2 ** attempt)
+
+    return None, time.time() - start_time
+
+def get_advanced_options():
+    """Display and collect advanced screenshot options"""
+    with st.expander("🛠️ Advanced Options"):
+        col1, col2 = st.columns(2)
         
-        # Take screenshot
-        screenshot = driver.get_screenshot_as_png()
-        return screenshot
+        with col1:
+            wait_time = st.slider(
+                "Page Load Wait Time (seconds)", 
+                min_value=1, 
+                max_value=10, 
+                value=3
+            )
+            
+            hide_cookie_banners = st.checkbox(
+                "Auto-hide Cookie Banners", 
+                value=True
+            )
 
-    except Exception as e:
-        st.error(f"Error capturing screenshot: {str(e)}")
-        return None
-    finally:
-        driver.quit()
+        with col2:
+            full_page = st.checkbox(
+                "Capture Full Page", 
+                value=True
+            )
 
-def validate_url(url):
-    """Validate URL format"""
-    if not url:
-        return False
-    if not url.startswith(('http://', 'https://')):
-        return False
-    return validators.url(url)
+        return {
+            "wait_time": wait_time,
+            "full_page": full_page,
+            "hide_cookie_banners": hide_cookie_banners
+        }
 
 def main():
-    st.title("🖼️ Website Screenshot Generator")
+    st.title("🖼️ Website Screenshot Generator Pro")
+    
+    # User info
+    st.markdown(f"""
+        <div class="user-info">
+            <p>🕒 {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+            <p>👤 Current User: gfdiazc</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Sidebar for resolution selection
-    with st.sidebar:
-        st.header("📏 Resolution Settings")
-        selected_resolution = st.selectbox(
-            "Choose Device Resolution",
-            list(RESOLUTIONS.keys())
-        )
-        width, height = RESOLUTIONS[selected_resolution]
-        st.info(f"Selected resolution: {width}x{height}")
-
-    # Main content area
-    tab1, tab2 = st.tabs(["Single URL", "Multiple URLs"])
+    # Main content tabs
+    tab1, tab2 = st.tabs(["📸 Single URL", "📑 Batch Processing"])
 
     with tab1:
-        url = st.text_input("Enter website URL", placeholder="https://example.com")
-        if st.button("Generate Screenshot") and url:
-            if validate_url(url):
-                with st.spinner("Generating screenshot..."):
-                    screenshot = capture_screenshot(url, width, height)
+        website_url = st.text_input(
+            "Enter website URL",
+            placeholder="https://example.com"
+        )
+
+        # Resolution selection
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            resolution_options = {
+                "Desktop (1920x1080)": (1920, 1080),
+                "Tablet (768x1024)": (768, 1024),
+                "Mobile (375x812)": (375, 812),
+                "Custom": "custom"
+            }
+            
+            selected_resolution = st.selectbox(
+                "Select Device Resolution",
+                options=list(resolution_options.keys())
+            )
+        
+        # Handle custom resolution
+        if selected_resolution == "Custom":
+            col1, col2 = st.columns(2)
+            with col1:
+                width = st.number_input("Width (px)", value=1024, min_value=200, max_value=3840)
+            with col2:
+                height = st.number_input("Height (px)", value=768, min_value=200, max_value=2160)
+        else:
+            width, height = resolution_options[selected_resolution]
+
+        # Advanced options
+        options = get_advanced_options()
+
+        # Generate screenshot button
+        if st.button("🎯 Generate Screenshot", key="single_url"):
+            if validate_url(website_url):
+                with st.spinner("📸 Capturing screenshot..."):
+                    screenshot, processing_time = capture_screenshot(
+                        website_url, width, height, options
+                    )
+                    
                     if screenshot:
-                        st.success("Screenshot generated successfully!")
-                        st.image(screenshot)
+                        st.success(f"✨ Screenshot captured successfully! ({processing_time:.1f}s)")
+                        st.image(screenshot, use_column_width=True)
                         
                         # Download button
-                        filename = f"screenshot_{urlparse(url).netloc}.png"
                         st.download_button(
-                            label="Download Screenshot",
+                            "📥 Download Screenshot",
                             data=screenshot,
-                            file_name=filename,
+                            file_name=f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
                             mime="image/png"
                         )
-            else:
-                st.error("Please enter a valid URL")
 
     with tab2:
-        uploaded_file = st.file_uploader("Upload a CSV or TXT file with URLs (one per line)")
-        if uploaded_file:
-            content = uploaded_file.getvalue().decode()
-            urls = [url.strip() for url in content.split('\n') if url.strip()]
-            
-            if st.button("Process All URLs"):
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                results = []
-                for idx, url in enumerate(urls):
-                    if validate_url(url):
-                        status_text.text(f"Processing {url}...")
-                        screenshot = capture_screenshot(url, width, height)
-                        
-                        if screenshot:
-                            results.append({
-                                "URL": url,
-                                "Status": "Success",
-                                "Screenshot": screenshot
-                            })
-                        else:
-                            results.append({
-                                "URL": url,
-                                "Status": "Failed",
-                                "Screenshot": None
-                            })
-                    else:
-                        results.append({
-                            "URL": url,
-                            "Status": "Invalid URL",
-                            "Screenshot": None
-                        })
-                    
-                    progress_bar.progress((idx + 1) / len(urls))
-                
-                # Display results
-                st.write("### Results")
-                for result in results:
-                    with st.expander(f"📸 {result['URL']}"):
-                        st.write(f"Status: {result['Status']}")
-                        if result['Screenshot']:
-                            st.image(result['Screenshot'])
-                            filename = f"screenshot_{urlparse(result['URL']).netloc}.png"
-                            st.download_button(
-                                label="Download Screenshot",
-                                data=result['Screenshot'],
-                                file_name=filename,
-                                mime="image/png"
-                            )
+        st.info("Batch processing feature coming soon! 🚧")
+
+def display_footer():
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style='text-align: center'>
+            <p style='color: #6c757d;'>
+                <small>
+                    Made with ❤️ by GitHub Copilot
+                </small>
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+        display_footer()
+    except Exception as e:
+        st.error(f"❌ An unexpected error occurred: {str(e)}")
