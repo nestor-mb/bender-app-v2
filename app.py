@@ -204,15 +204,11 @@ def get_advanced_options():
 
 def main():
     st.title("🖼️ Website Screenshot Generator Pro")
+    st.markdown("""
+        Generate high-quality screenshots of any website with advanced customization options.
+        Perfect for documentation, testing, and archival purposes.
+    """)
     
-    # User info
-    st.markdown(f"""
-        <div class="user-info">
-            <p>🕒 {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
-            <p>👤 Current User: gfdiazc</p>
-        </div>
-    """, unsafe_allow_html=True)
-
     # Main content tabs
     tab1, tab2 = st.tabs(["📸 Single URL", "📑 Batch Processing"])
 
