@@ -10,6 +10,11 @@ from datetime import datetime
 import pandas as pd
 import zipfile
 from urllib.parse import urlparse
+import io
+import base64
+from PIL import Image
+from io import BytesIO
+import pyperclip  # You'll need to install this: pip install pyperclip
 
 # Page Configuration
 st.set_page_config(
@@ -32,16 +37,6 @@ st.markdown("""
         color: #1E88E5;
         text-align: center;
         margin-bottom: 2rem;
-    }
-    
-    /* User info box */
-    .user-info {
-        background-color: #f8f9fa;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 2rem;
-        text-align: center;
-        color: #6c757d;
     }
     
     /* Input fields */
@@ -128,7 +123,7 @@ def setup_webdriver():
         return None
 
 def capture_screenshot(url, width, height, options):
-    """Capture screenshot with retry logic"""
+    """Capture screenshot with improved cookie banner handling"""
     start_time = time.time()
     max_retries = 3
     
@@ -144,18 +139,54 @@ def capture_screenshot(url, width, height, options):
             # Wait for page load
             time.sleep(options.get('wait_time', 3))
 
-            # Handle cookie banners
-            if options.get('hide_cookie_banners', True):
+            # Enhanced cookie banner handling
+            try:
+                # Extended list of common cookie acceptance button patterns
+                cookie_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, """
+                        //button[
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'agree') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'aceptar') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'aceitar') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'aceptar todas') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept all') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'allow all')
+                        ] | 
+                        //div[
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept') or 
+                            contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'agree')
+                        ]
+                    """))
+                )
+                driver.execute_script("arguments[0].click();", cookie_button)
+                time.sleep(2)  # Wait for banner to disappear
+            except Exception:
+                # Try alternative methods if the first attempt fails
                 try:
-                    cookie_buttons = WebDriverWait(driver, 5).until(
-                        EC.presence_of_all_elements_located((By.XPATH, 
-                            "//button[contains(text(), 'Accept') or contains(text(), 'Agree')]"
-                        ))
-                    )
-                    for button in cookie_buttons:
-                        driver.execute_script("arguments[0].click();", button)
+                    # Look for iframes that might contain cookie banners
+                    iframes = driver.find_elements(By.TAG_NAME, "iframe")
+                    for iframe in iframes:
+                        try:
+                            driver.switch_to.frame(iframe)
+                            cookie_button = driver.find_element(By.XPATH, """
+                                //*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept') or 
+                                   contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'agree')]
+                            """)
+                            driver.execute_script("arguments[0].click();", cookie_button)
+                            driver.switch_to.default_content()
+                            time.sleep(2)
+                            break
+                        except:
+                            driver.switch_to.default_content()
                 except:
-                    pass
+                    pass  # Continue if no cookie banner is found
+
+            # Adjust window size for full page if requested
+            if options.get('full_page', True):
+                total_height = driver.execute_script("return Math.max( document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );")
+                driver.set_window_size(width, total_height)
+                time.sleep(1)  # Wait for resize
 
             # Take screenshot
             screenshot = driver.get_screenshot_as_png()
@@ -202,12 +233,58 @@ def get_advanced_options():
             "hide_cookie_banners": hide_cookie_banners
         }
 
+def format_filename(base_name, format_option, timestamp):
+    """Format filename based on user selection"""
+    if format_option == "Date_Time":
+        return f"{base_name}_{timestamp}"
+    elif format_option == "Unix_Timestamp":
+        return f"{base_name}_{int(datetime.now().timestamp())}"
+    elif format_option == "Custom":
+        return st.text_input("Enter custom filename", value=base_name)
+    return base_name
+
+def create_zip_file(screenshots, url, format_option):
+    """Create a ZIP file containing all screenshots"""
+    zip_buffer = io.BytesIO()
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for resolution_name, screenshot_data in screenshots.items():
+            base_name = f"screenshot_{resolution_name.split()[0].lower()}"
+            filename = format_filename(base_name, format_option, timestamp) + ".png"
+            zip_file.writestr(filename, screenshot_data)
+    
+    return zip_buffer.getvalue()
+
+def copy_to_clipboard(image_data):
+    """Copy image data to clipboard"""
+    try:
+        import pyperclip
+        from PIL import Image
+        from io import BytesIO
+        
+        # Convert PNG data to base64
+        image_b64 = base64.b64encode(image_data).decode()
+        pyperclip.copy(f"data:image/png;base64,{image_b64}")
+        return True
+    except Exception as e:
+        st.error(f"Failed to copy to clipboard: {str(e)}")
+        return False
+
+def create_thumbnail(image_data, max_size=(150, 150)):
+    """Create a thumbnail from image data"""
+    try:
+        image = Image.open(BytesIO(image_data))
+        image.thumbnail(max_size)
+        thumb_buffer = BytesIO()
+        image.save(thumb_buffer, format='PNG')
+        return thumb_buffer.getvalue()
+    except Exception as e:
+        st.error(f"Failed to create thumbnail: {str(e)}")
+        return None
+
 def main():
     st.title("🖼️ Website Screenshot Generator Pro")
-    st.markdown("""
-        Generate high-quality screenshots of any website with advanced customization options.
-        Perfect for documentation, testing, and archival purposes.
-    """)
     
     # Main content tabs
     tab1, tab2 = st.tabs(["📸 Single URL", "📑 Batch Processing"])
@@ -218,56 +295,142 @@ def main():
             placeholder="https://example.com"
         )
 
-        # Resolution selection
+        # Resolution selection with multiple choice
+        st.subheader("Select Screenshot Resolutions")
+        
+        resolution_options = {
+            "Desktop (1920x1080)": (1920, 1080),
+            "Tablet (768x1024)": (768, 1024),
+            "Mobile (375x812)": (375, 812)
+        }
+        
         col1, col2 = st.columns([2, 1])
         with col1:
-            resolution_options = {
-                "Desktop (1920x1080)": (1920, 1080),
-                "Tablet (768x1024)": (768, 1024),
-                "Mobile (375x812)": (375, 812),
-                "Custom": "custom"
-            }
-            
-            selected_resolution = st.selectbox(
-                "Select Device Resolution",
-                options=list(resolution_options.keys())
+            selected_resolutions = st.multiselect(
+                "Choose one or more resolutions:",
+                options=list(resolution_options.keys()),
+                default=["Desktop (1920x1080)"],
+                help="Select multiple resolutions to generate screenshots for each"
             )
         
-        # Handle custom resolution
-        if selected_resolution == "Custom":
+        # Advanced options in a cleaner layout
+        with st.expander("🛠️ Advanced Options"):
             col1, col2 = st.columns(2)
+            
             with col1:
-                width = st.number_input("Width (px)", value=1024, min_value=200, max_value=3840)
+                wait_time = st.slider(
+                    "Page Load Wait Time (seconds)", 
+                    min_value=1, 
+                    max_value=10, 
+                    value=3
+                )
+                hide_cookie_banners = st.checkbox(
+                    "Auto-hide Cookie Banners", 
+                    value=True
+                )
+
             with col2:
-                height = st.number_input("Height (px)", value=768, min_value=200, max_value=2160)
-        else:
-            width, height = resolution_options[selected_resolution]
+                full_page = st.checkbox(
+                    "Capture Full Page", 
+                    value=True
+                )
+                filename_format = st.selectbox(
+                    "Filename Format",
+                    ["Date_Time", "Unix_Timestamp", "Custom"]
+                )
 
-        # Advanced options
-        options = get_advanced_options()
-
-        # Generate screenshot button
-        if st.button("🎯 Generate Screenshot", key="single_url"):
-            if validate_url(website_url):
-                with st.spinner("📸 Capturing screenshot..."):
+        # Generate screenshots button
+        if st.button("🎯 Generate Screenshots", key="single_url"):
+            if not selected_resolutions:
+                st.warning("⚠️ Please select at least one resolution")
+            elif validate_url(website_url):
+                screenshots_data = {}
+                
+                # Progress bar with status
+                progress_text = "Generating screenshots..."
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # Generate screenshots
+                for idx, resolution_name in enumerate(selected_resolutions):
+                    status_text.text(f"Capturing {resolution_name}...")
+                    width, height = resolution_options[resolution_name]
                     screenshot, processing_time = capture_screenshot(
-                        website_url, width, height, options
+                        website_url, width, height, 
+                        {"wait_time": wait_time, "full_page": full_page}
                     )
                     
                     if screenshot:
-                        st.success(f"✨ Screenshot captured successfully! ({processing_time:.1f}s)")
-                        st.image(screenshot, use_column_width=True)
-                        
-                        # Download button
+                        screenshots_data[resolution_name] = screenshot
+                    
+                    # Update progress
+                    progress = (idx + 1) / len(selected_resolutions)
+                    progress_bar.progress(progress)
+                
+                if screenshots_data:
+                    status_text.text("✨ All screenshots captured successfully!")
+                    
+                    # Download options
+                    st.subheader("Download Options")
+                    download_option = st.radio(
+                        "Select download format:",
+                        ["Individual Files", "ZIP Archive", "Copy to Clipboard"],
+                        horizontal=True
+                    )
+                    
+                    # Thumbnail gallery
+                    st.subheader("Screenshots Preview")
+                    thumbnail_cols = st.columns(len(screenshots_data))
+                    
+                    for idx, (resolution_name, screenshot) in enumerate(screenshots_data.items()):
+                        with thumbnail_cols[idx]:
+                            thumbnail = create_thumbnail(screenshot)
+                            if thumbnail:
+                                st.image(thumbnail, caption=resolution_name)
+                                if st.button(f"Show {resolution_name}", key=f"show_{idx}"):
+                                    with st.expander(f"📸 {resolution_name} Full Size", expanded=True):
+                                        st.image(screenshot, use_container_width=True)
+                    
+                    # Download section
+                    st.subheader("Download Section")
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    
+                    if download_option == "Individual Files":
+                        for resolution_name, screenshot in screenshots_data.items():
+                            base_name = f"screenshot_{resolution_name.split()[0].lower()}"
+                            filename = format_filename(base_name, filename_format, timestamp) + ".png"
+                            
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.download_button(
+                                    f"📥 Download {resolution_name}",
+                                    data=screenshot,
+                                    file_name=filename,
+                                    mime="image/png"
+                                )
+                            with col2:
+                                if st.button(f"📋 Copy {resolution_name}", key=f"copy_{resolution_name}"):
+                                    if copy_to_clipboard(screenshot):
+                                        st.success(f"✅ {resolution_name} copied to clipboard!")
+                    
+                    elif download_option == "ZIP Archive":
+                        zip_data = create_zip_file(screenshots_data, website_url, filename_format)
                         st.download_button(
-                            "📥 Download Screenshot",
-                            data=screenshot,
-                            file_name=f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-                            mime="image/png"
+                            "📦 Download All Screenshots (ZIP)",
+                            data=zip_data,
+                            file_name=f"screenshots_{timestamp}.zip",
+                            mime="application/zip"
                         )
+                    
+                    else:  # Copy to Clipboard
+                        for resolution_name, screenshot in screenshots_data.items():
+                            if st.button(f"📋 Copy {resolution_name} to Clipboard", key=f"clipboard_{resolution_name}"):
+                                if copy_to_clipboard(screenshot):
+                                    st.success(f"✅ {resolution_name} copied to clipboard!")
 
     with tab2:
         st.info("Batch processing feature coming soon! 🚧")
+
 
 def display_footer():
     st.markdown("---")
@@ -285,8 +448,5 @@ def display_footer():
     )
 
 if __name__ == "__main__":
-    try:
-        main()
-        display_footer()
-    except Exception as e:
-        st.error(f"❌ An unexpected error occurred: {str(e)}")
+    main()
+    display_footer()
