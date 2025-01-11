@@ -1,0 +1,82 @@
+/* Light mode styles */
+.main {
+    padding: 2rem;
+}
+
+h1 {
+    color: #1E88E5;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.stTextInput > div > div > input {
+    border-radius: 0.5rem;
+}
+
+.stSelectbox > div > div > div {
+    border-radius: 0.5rem;
+}
+
+.stButton > button {
+    border-radius: 0.5rem;
+    background-color: #1E88E5;
+    color: white;
+    border: none;
+    padding: 0.5rem 2rem;
+    font-weight: 500;
+    width: 100%;
+}
+
+.stButton > button:hover {
+    background-color: #1976D2;
+    border: none;
+}
+
+/* Botones de tipo "secondary" */
+.stButton > button[kind="secondary"] {
+    background-color: #6c757d;
+    color: white;
+}
+
+.stButton > button[kind="secondary"]:hover {
+    background-color: #5a6268;
+}
+
+/* Botones de acciones destructivas */
+.delete-button, 
+.stButton > button[data-testid*="clear"] {
+    background-color: #dc3545 !important;
+}
+
+.delete-button:hover,
+.stButton > button[data-testid*="clear"]:hover {
+    background-color: #c82333 !important;
+}
+
+.stProgress > div > div {
+    background-color: #1E88E5;
+}
+
+.stAlert {
+    border-radius: 0.5rem;
+}
+
+.section-container {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.results-container {
+    margin-top: 2rem;
+}
+
+.url-queue {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+} 
