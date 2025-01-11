@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+venv/
 env/
 build/
 develop-eggs/
@@ -21,9 +22,8 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-venv/
-ENV/
+# Streamlit
+.streamlit/secrets.toml
 
 # IDE
 .idea/
@@ -31,10 +31,11 @@ ENV/
 *.swp
 *.swo
 
-# Streamlit
-.streamlit/secrets.toml
+# OS
+.DS_Store
+Thumbs.db
 
-# Project specific
-feedback.txt
+# Chrome
+.chrome/
+chromedriver_autoinstaller/
 *.log
-screenshots/

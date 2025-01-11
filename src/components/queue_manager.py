@@ -29,6 +29,10 @@ def process_screenshots(selected_resolutions):
     message_placeholder = st.empty()
     
     driver = setup_webdriver()
+    if driver is None:
+        st.error("No se pudo inicializar el navegador. Por favor, verifica la instalación de Chrome y ChromeDriver en el servidor.")
+        return
+        
     total_tasks = len(st.session_state.urls_queue) * len(selected_resolutions)
     completed_tasks = 0
     
@@ -48,7 +52,7 @@ def process_screenshots(selected_resolutions):
                     
                     # Capturar screenshot
                     width, height = RESOLUTIONS[resolution_name]
-                    status = st.status(f"📸 {url} - {resolution_name} ({width}x{height})", expanded=True)
+                    status = st.status(f"📸 {url} - {resolution_name}", expanded=False)
                     status.update(label=f"⏳ Capturando {resolution_name}...", state="running")
                     
                     screenshot = capture_screenshot(driver, url, width, height)
@@ -61,21 +65,23 @@ def process_screenshots(selected_resolutions):
                     completed_tasks += 1
                     time.sleep(0.1)  # Pequeña pausa para ver la animación
             
-            # Mostrar progreso final
-            progress_placeholder.progress(1.0)
-            status_placeholder.markdown("<h3 style='text-align: center'>✨ ¡Proceso completado!</h3>", unsafe_allow_html=True)
-            message_placeholder.markdown("<p style='text-align: center'>Todas las capturas han sido procesadas exitosamente</p>", unsafe_allow_html=True)
-            
-            # Efectos de celebración
-            st.balloons()
-            st.success("¡Todas las capturas han sido completadas con éxito! 🎉")
-            
-            st.session_state.show_results = True
-            time.sleep(1)
-            st.rerun()
+            if completed_tasks > 0:
+                # Mostrar progreso final
+                progress_placeholder.progress(1.0)
+                status_placeholder.markdown("<h3 style='text-align: center'>✨ ¡Proceso completado!</h3>", unsafe_allow_html=True)
+                message_placeholder.markdown("<p style='text-align: center'>Todas las capturas han sido procesadas exitosamente</p>", unsafe_allow_html=True)
+                
+                # Efectos de celebración
+                st.balloons()
+                st.success("¡Todas las capturas han sido completadas con éxito! 🎉")
+                
+                st.session_state.show_results = True
+                time.sleep(1)
+                st.rerun()
     
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
 
 def queue_manager_section():
     """Component for managing URL queue and screenshot settings"""

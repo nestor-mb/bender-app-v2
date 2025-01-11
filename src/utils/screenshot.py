@@ -16,19 +16,35 @@ from ..config.constants import CHROME_OPTIONS
 
 def setup_webdriver():
     """Setup and return configured Chrome webdriver"""
-    chromedriver_autoinstaller.install()
+    try:
+        # Intentar instalar ChromeDriver
+        chromedriver_autoinstaller.install()
+    except Exception as e:
+        st.warning(f"No se pudo instalar ChromeDriver automáticamente. Usando configuración por defecto.")
+        
     options = Options()
     for option in CHROME_OPTIONS:
         options.add_argument(option)
-    return webdriver.Chrome(options=options)
+    
+    try:
+        # Intentar crear el driver con la configuración por defecto
+        return webdriver.Chrome(options=options)
+    except Exception as e:
+        st.error(f"Error al inicializar Chrome: {str(e)}")
+        st.info("Asegúrate de que Chrome y ChromeDriver estén instalados en el servidor.")
+        return None
 
 @st.cache_data
 def capture_screenshot(_driver, url, width, height):
     """Capture screenshot using the provided driver"""
-    _driver.set_window_size(width, height)
-    _driver.get(url)
-
+    if _driver is None:
+        st.error("No se pudo inicializar el navegador.")
+        return None
+        
     try:
+        _driver.set_window_size(width, height)
+        _driver.get(url)
+
         # Wait for the page to load fully
         time.sleep(3)
 
@@ -48,7 +64,7 @@ def capture_screenshot(_driver, url, width, height):
         screenshot = _driver.get_screenshot_as_png()
         return screenshot
     except Exception as e:
-        st.error(f"Error capturing screenshot for {url}: {e}")
+        st.error(f"Error al capturar screenshot de {url}: {str(e)}")
         return None
 
 @st.cache_data

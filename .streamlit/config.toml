@@ -1,14 +1,17 @@
-[server]
-runOnSave = false  # Desactiva la detección automática de cambios para reducir el uso de inotify
-enableCORS = true  # Permitir CORS para compatibilidad con la protección CSRF
-
-[browser]
-serverAddress = "localhost"  # or "192.168.3.18"
-serverPort = 8501
-
 [theme]
-primaryColor = "#FF4B4B"
+primaryColor = "#1E88E5"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
+secondaryBackgroundColor = "#F8F9FA"
 textColor = "#262730"
 font = "sans serif"
+
+[server]
+enableCORS = true
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[browser]
+gatherUsageStats = false
+
+[logger]
+level = "error"

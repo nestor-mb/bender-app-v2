@@ -1,7 +1,8 @@
-streamlit>=1.28.0
-selenium>=4.15.0
-validators>=0.22.0
-Pillow>=10.0.0
-pyperclip>=1.8.2
-webdriver-manager>=4.0.0
-chromedriver-autoinstaller>=0.6.2
+streamlit==1.29.0
+selenium==4.15.2
+validators==0.22.0
+Pillow==10.1.0
+pyperclip==1.8.2
+webdriver-manager==4.0.1
+chromedriver-autoinstaller==0.6.2
+pyvirtualdisplay==3.0
