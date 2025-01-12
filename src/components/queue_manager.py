@@ -101,7 +101,7 @@ def queue_manager_section():
                     if st.button("🗑️", key=f"remove_{idx}", type="secondary", help="Remove URL"):
                         st.session_state.urls_queue.pop(idx)
                         st.rerun()
-            
+        
             if st.button("Clear Queue", type="secondary", key="clear_queue", help="Remove all URLs", use_container_width=True):
                 st.session_state.urls_queue = []
                 st.rerun()

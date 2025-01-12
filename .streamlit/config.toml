@@ -15,3 +15,6 @@ gatherUsageStats = false
 
 [logger]
 level = "error"
+
+[ui]
+hideTopBar = true

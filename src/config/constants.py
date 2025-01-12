@@ -27,6 +27,7 @@ CHROME_OPTIONS = [
 PAGE_CONFIG = {
     "page_title": "Bender - Screenshot Tool",
     "page_icon": "📸",
-    "layout": "wide",
+    "layout": "centered",
     "initial_sidebar_state": "collapsed",
+    "menu_items": None
 } 

@@ -103,14 +103,22 @@ def create_thumbnail(screenshot_data):
 @st.cache_data
 def create_zip_file(screenshots_data):
     """Create a ZIP file containing all screenshots"""
+    # Crear un buffer en memoria para el archivo ZIP
     zip_buffer = io.BytesIO()
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
+    # Crear el archivo ZIP
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for url, screenshots in screenshots_data.items():
+        for url, resolutions in screenshots_data.items():
+            # Obtener el dominio de la URL para usar en el nombre del archivo
             domain = urlparse(url).netloc
-            for resolution_name, screenshot in screenshots.items():
-                filename = f"{domain}/{resolution_name.split()[0].lower()}.png"
-                zip_file.writestr(filename, screenshot)
+            
+            for resolution_name, screenshot_data in resolutions.items():
+                # Crear un nombre de archivo único para cada screenshot
+                filename = f"{domain}_{resolution_name.split()[0].lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                
+                # Añadir el screenshot al archivo ZIP
+                zip_file.writestr(filename, screenshot_data)
     
+    # Mover el puntero al inicio del buffer
+    zip_buffer.seek(0)
     return zip_buffer.getvalue() 

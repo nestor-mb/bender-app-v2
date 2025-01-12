@@ -1,6 +1,21 @@
 import streamlit as st
 from ..utils.validation import validate_url
 
+def show_help_modal():
+    st.markdown("""
+        <div class="help-text">
+            <p><strong>Instrucciones:</strong></p>
+            <ul>
+                <li>Ingresa una URL para capturar una sola página</li>
+                <li>Ingresa múltiples URLs separadas por comas o nuevas líneas</li>
+                <li>Sube un archivo CSV con una columna de URLs</li>
+                <li>Selecciona la resolución deseada para las capturas</li>
+                <li>Haz clic en "Capturar" para procesar las URLs</li>
+            </ul>
+            <p><em>Nota: Las URLs deben comenzar con http:// o https://</em></p>
+        </div>
+    """, unsafe_allow_html=True)
+
 def url_input_section():
     """Component for URL input section"""
     with st.container():
@@ -9,7 +24,7 @@ def url_input_section():
         # URL Input
         url_input = st.text_area(
             "Enter URL(s)",
-            placeholder="Enter one or multiple URLs (one per line)\nExample:\nhttps://example.com\nhttps://another-example.com",
+            placeholder="https://example.com\nhttps://another-example.com",
             help="Enter one or multiple URLs, each on a new line"
         )
         

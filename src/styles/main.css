@@ -1,82 +1,242 @@
-/* Light mode styles */
-.main {
-    padding: 2rem;
+/* Base styles */
+.main-container {
+    padding: 0.5rem;
+    max-width: 768px;
+    margin: 0 auto;
 }
 
+/* Typography */
 h1 {
-    color: #1E88E5;
-    text-align: center;
-    margin-bottom: 2rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    display: none;
 }
 
-.stTextInput > div > div > input {
-    border-radius: 0.5rem;
+h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
 }
 
-.stSelectbox > div > div > div {
-    border-radius: 0.5rem;
-}
-
-.stButton > button {
-    border-radius: 0.5rem;
-    background-color: #1E88E5;
-    color: white;
-    border: none;
-    padding: 0.5rem 2rem;
-    font-weight: 500;
+/* Form elements */
+.stTextInput input {
     width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
 }
 
-.stButton > button:hover {
-    background-color: #1976D2;
-    border: none;
+/* Help button and modal */
+button[data-testid="help_button"] {
+    background: none !important;
+    border: none !important;
+    padding: 0.25rem !important;
+    font-size: 1.1rem !important;
+    color: #6c757d !important;
+    cursor: pointer !important;
+    transition: color 0.2s ease !important;
 }
 
-/* Botones de tipo "secondary" */
-.stButton > button[kind="secondary"] {
-    background-color: #6c757d;
+button[data-testid="help_button"]:hover {
+    color: #17a2b8 !important;
+}
+
+/* Download ZIP button */
+[data-testid="stDownloadButton"] button {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+[data-testid="stDownloadButton"] button:hover {
+    background-color: #45a049 !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+[data-testid="stDownloadButton"] button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.help-text {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: #6c757d;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 4px;
+}
+
+.help-text ul {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
+}
+
+.help-text li {
+    margin-bottom: 0.25rem;
+}
+
+/* Buttons */
+.stButton > button {
+    width: auto;
+    padding: 0.5rem 1rem;
+    margin: 0.25rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* URL Queue */
+.url-queue {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+/* Results section */
+.results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 0.5rem;
+}
+
+.screenshot-card {
+    background: #ffffff;
+    border-radius: 4px;
+    padding: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.results-container h3 {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin: 1rem 0 0.5rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* Responsive adjustments for 768px */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 0.5rem;
+    }
+
+    .section-container {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    h2 {
+        font-size: 1rem;
+    }
+
+    .stButton > button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    button[data-testid="help_button"] {
+        font-size: 1rem !important;
+    }
+
+    .results-container {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+    }
+
+    /* Adjust column layouts */
+    .row-widget.stHorizontal {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Ensure buttons don't overflow */
+    .row-widget.stHorizontal > div {
+        flex: 1 1 auto;
+        min-width: 120px;
+    }
+
+    .help-text {
+        font-size: 0.8rem;
+        padding: 0.75rem;
+    }
+}
+
+/* Custom styles for delete and clear buttons */
+.delete-button button, .clear-button button {
+    background-color: #dc3545;
     color: white;
 }
 
-.stButton > button[kind="secondary"]:hover {
-    background-color: #5a6268;
+.delete-button button:hover, .clear-button button:hover {
+    background-color: #c82333;
 }
 
-/* Botones de acciones destructivas */
-.delete-button, 
-.stButton > button[data-testid*="clear"] {
-    background-color: #dc3545 !important;
+/* Loading animation container */
+.loading-container {
+    text-align: center;
+    padding: 0.75rem;
 }
 
-.delete-button:hover,
-.stButton > button[data-testid*="clear"]:hover {
-    background-color: #c82333 !important;
-}
-
+/* Progress bar styling */
 .stProgress > div > div {
-    background-color: #1E88E5;
+    background-color: #17a2b8;
 }
 
+/* Expander styling */
+.streamlit-expanderHeader {
+    font-size: 0.9rem !important;
+    padding: 0.75rem !important;
+    background-color: #f8f9fa !important;
+    color: #2c3e50 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    margin-bottom: 0.5rem !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+.streamlit-expanderHeader:hover {
+    background-color: #e9ecef !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
+.streamlit-expanderContent {
+    border: none !important;
+    padding: 1rem !important;
+    background-color: white !important;
+    border-radius: 4px !important;
+    margin-top: 0.5rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* File uploader styling */
+.stFileUploader {
+    padding: 0.5rem;
+    border: 1px dashed #e0e0e0;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+}
+
+/* Alert messages */
 .stAlert {
-    border-radius: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
 }
 
-.section-container {
-    background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.results-container {
-    margin-top: 2rem;
-}
-
-.url-queue {
-    max-height: 300px;
-    overflow-y: auto;
-    padding: 1rem;
+/* Screenshot container */
+.screenshot-container {
     background-color: white;
-    border-radius: 0.5rem;
-    margin: 1rem 0;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 } 
