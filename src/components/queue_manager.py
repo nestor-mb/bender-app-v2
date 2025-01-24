@@ -24,12 +24,13 @@ def process_screenshots(selected_resolutions):
     """Process screenshots for all URLs in queue"""
     st.session_state.screenshots_data = {}
     
-    # Crear contenedor para la barra de progreso
+    # Create a container for the progress bar
     progress_placeholder = st.empty()
+    message_placeholder = st.empty()  # Keep this for loading messages
     
     driver = setup_webdriver()
     if driver is None:
-        st.error("No se pudo inicializar el navegador. Por favor, verifica la instalación de Chrome y ChromeDriver en el servidor.")
+        st.error("Could not initialize the browser. Please check the installation of Chrome and ChromeDriver.")
         return
         
     total_tasks = len(st.session_state.urls_queue) * len(selected_resolutions)
@@ -40,23 +41,54 @@ def process_screenshots(selected_resolutions):
             st.session_state.screenshots_data[url] = {}
             
             for res_idx, resolution_name in enumerate(selected_resolutions):
-                # Capturar screenshot
+                # Capture screenshot
                 width, height = RESOLUTIONS[resolution_name]
                 
-                # Captura de pantalla
+                # Random messages to show during the capture
+                loading_messages = [
+                    "🤖 Preparing the capturing robots...",
+                    "📸 Adjusting the virtual lens...",
+                    "🎨 Mixing the perfect pixels...",
+                    "🚀 Starting the capture engines...",
+                    "🎯 Aiming at the target...",
+                    "🌈 Calibrating the colors...",
+                    "🔍 Focusing on the page...",
+                    "⚡ Loading superpowers...",
+                    "🎪 Preparing the show...",
+                    "🎭 Putting on the capture mask..."
+                ]
+                
+                # Start the capture and measure the time
+                start_time = time.time()
+                
+                # Capture the screenshot
                 screenshot = capture_screenshot(driver, url, width, height)
                 
-                # Actualizar la barra de progreso
-                progress_placeholder.progress((completed_tasks + 1) / total_tasks)
+                # Calculate the time taken for the capture
+                elapsed_time = time.time() - start_time
+                
+                # Update the progress bar
+                for i in range(10):  # 10 steps for the progress bar
+                    progress = (completed_tasks + (i + 1) / 10) / total_tasks
+                    progress_placeholder.progress(round(progress, 2))
+                    time.sleep(elapsed_time / 10)  # Synchronize with the capture time
+                    
+                    # Change the loading message
+                    message_placeholder.markdown(f"<p style='text-align: center'>{random.choice(loading_messages)}</p>", unsafe_allow_html=True)
                 
                 if screenshot:
                     st.session_state.screenshots_data[url][resolution_name] = screenshot
                 completed_tasks += 1
             
             if completed_tasks > 0:
-                # Mostrar progreso final
+                # Show final progress
                 progress_placeholder.progress(1.0)
-                st.success("¡Todas las capturas han sido completadas con éxito! 🎉")
+                message_placeholder.markdown("<p style='text-align: center'>All captures have been processed successfully</p>", unsafe_allow_html=True)
+                
+                # Celebration effects
+                st.balloons()
+                st.success("All captures have been completed successfully! 🎉")
+                
                 st.session_state.show_results = True
                 time.sleep(1)
                 st.rerun()

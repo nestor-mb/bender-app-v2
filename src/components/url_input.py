@@ -28,13 +28,27 @@ def url_input_section():
             help="Enter one or multiple URLs, each on a new line"
         )
         
-        # File uploader for CSV
+        # Drag and drop file uploader
         uploaded_file = st.file_uploader(
             "Or upload a CSV file with URLs",
             type=["csv", "txt"],
             help="Upload a file containing one URL per line",
             label_visibility="collapsed"
         )
+        
+        # Add a question mark icon for help with expander
+        with st.expander("Help", expanded=False):
+            st.markdown("""
+                To upload a CSV file, please follow these guidelines:
+                - The file should contain one URL per line.
+                - Ensure that the file is in CSV format.
+                - The maximum file size is 200MB.
+                - Example of a valid CSV file:
+                  ```
+                  https://example.com
+                  https://another-example.com
+                  ```
+            """)
         
         if st.button("Add to Queue", type="primary"):
             new_urls = []
