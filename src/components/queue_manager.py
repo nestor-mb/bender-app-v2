@@ -4,6 +4,7 @@ import random
 from ..config.constants import RESOLUTIONS
 from ..utils.validation import validate_resolution
 from ..utils.screenshot import setup_webdriver, capture_screenshot
+import os
 
 # Mensajes divertidos para el proceso de captura
 LOADING_MESSAGES = [
@@ -25,7 +26,6 @@ def process_screenshots(selected_resolutions):
     
     # Crear contenedor para la barra de progreso
     progress_placeholder = st.empty()
-    message_placeholder = st.empty()
     
     driver = setup_webdriver()
     if driver is None:
@@ -43,37 +43,11 @@ def process_screenshots(selected_resolutions):
                 # Capturar screenshot
                 width, height = RESOLUTIONS[resolution_name]
                 
-                # Random messages to show during the capture
-                loading_messages = [
-                    "🤖 Preparing the capturing robots...",
-                    "📸 Adjusting the virtual lens...",
-                    "🎨 Mixing the perfect pixels...",
-                    "🚀 Starting the capture engines...",
-                    "🎯 Aiming at the target...",
-                    "🌈 Calibrating the colors...",
-                    "🔍 Focusing on the page...",
-                    "⚡ Loading superpowers...",
-                    "🎪 Preparing the show...",
-                    "🎭 Putting on the capture mask..."
-                ]
-                
-                # Iniciar la captura y medir el tiempo
-                start_time = time.time()
-                
                 # Captura de pantalla
                 screenshot = capture_screenshot(driver, url, width, height)
                 
-                # Calcular el tiempo que tomó la captura
-                elapsed_time = time.time() - start_time
-                
                 # Actualizar la barra de progreso
-                for i in range(10):  # 10 pasos para la barra de progreso
-                    progress = (completed_tasks + (i + 1) / 10) / total_tasks
-                    progress_placeholder.progress(round(progress, 2))
-                    time.sleep(elapsed_time / 10)  # Sincronizar con el tiempo de captura
-                    
-                    # Cambiar el mensaje de carga
-                    message_placeholder.markdown(f"<p style='text-align: center'>{random.choice(loading_messages)}</p>", unsafe_allow_html=True)
+                progress_placeholder.progress((completed_tasks + 1) / total_tasks)
                 
                 if screenshot:
                     st.session_state.screenshots_data[url][resolution_name] = screenshot
@@ -82,12 +56,7 @@ def process_screenshots(selected_resolutions):
             if completed_tasks > 0:
                 # Mostrar progreso final
                 progress_placeholder.progress(1.0)
-                message_placeholder.markdown("<p style='text-align: center'>Todas las capturas han sido procesadas exitosamente</p>", unsafe_allow_html=True)
-                
-                # Efectos de celebración
-                st.balloons()
                 st.success("¡Todas las capturas han sido completadas con éxito! 🎉")
-                
                 st.session_state.show_results = True
                 time.sleep(1)
                 st.rerun()
@@ -105,7 +74,12 @@ def queue_manager_section():
         st.markdown("<div class='section-container'>", unsafe_allow_html=True)
         st.subheader("URL Queue")
         
-        with st.expander("View Queue", expanded=True):
+        # Move progress messages here
+        if "processing_message" in st.session_state:
+            st.success(st.session_state.processing_message)
+
+        # Make the URL Queue collapsible
+        with st.expander("View Queue", expanded=False):
             for idx, url in enumerate(st.session_state.urls_queue):
                 col1, col2 = st.columns([4, 1])
                 with col1:
@@ -119,7 +93,7 @@ def queue_manager_section():
                 st.session_state.urls_queue = []
                 st.rerun()
         
-        # Resolution Selection
+        # Screenshot Settings Section
         st.subheader("Screenshot Settings")
         selected_resolutions = st.multiselect(
             "Select Resolutions",
@@ -145,6 +119,12 @@ def queue_manager_section():
             st.error("Invalid resolution format. Use WIDTHxHEIGHT (e.g., 1200x800)")
         
         if st.button("🚀 Generate Screenshots", type="primary", disabled=not selected_resolutions, use_container_width=True):
+            st.session_state.processing_message = "Processing URLs..."
             process_screenshots(selected_resolutions)
         
-        st.markdown("</div>", unsafe_allow_html=True) 
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# Load CSS
+def load_css():
+    with open(os.path.join("src", "styles", "main.css")) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True) 
