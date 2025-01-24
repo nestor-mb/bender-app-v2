@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import time
+import random
 
 # Import components
 from src.components.url_input import url_input_section

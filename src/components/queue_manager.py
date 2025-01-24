@@ -25,7 +25,6 @@ def process_screenshots(selected_resolutions):
     
     # Crear contenedor para la barra de progreso
     progress_placeholder = st.empty()
-    status_placeholder = st.empty()
     message_placeholder = st.empty()
     
     driver = setup_webdriver()
@@ -37,38 +36,52 @@ def process_screenshots(selected_resolutions):
     completed_tasks = 0
     
     try:
-        with st.spinner('Iniciando el proceso de captura...'):
-            for url_idx, url in enumerate(st.session_state.urls_queue):
-                st.session_state.screenshots_data[url] = {}
+        for url_idx, url in enumerate(st.session_state.urls_queue):
+            st.session_state.screenshots_data[url] = {}
+            
+            for res_idx, resolution_name in enumerate(selected_resolutions):
+                # Capturar screenshot
+                width, height = RESOLUTIONS[resolution_name]
                 
-                for res_idx, resolution_name in enumerate(selected_resolutions):
-                    # Actualizar mensajes y progreso
-                    progress = completed_tasks / total_tasks
-                    progress_placeholder.progress(progress)
+                # Random messages to show during the capture
+                loading_messages = [
+                    "🤖 Preparing the capturing robots...",
+                    "📸 Adjusting the virtual lens...",
+                    "🎨 Mixing the perfect pixels...",
+                    "🚀 Starting the capture engines...",
+                    "🎯 Aiming at the target...",
+                    "🌈 Calibrating the colors...",
+                    "🔍 Focusing on the page...",
+                    "⚡ Loading superpowers...",
+                    "🎪 Preparing the show...",
+                    "🎭 Putting on the capture mask..."
+                ]
+                
+                # Iniciar la captura y medir el tiempo
+                start_time = time.time()
+                
+                # Captura de pantalla
+                screenshot = capture_screenshot(driver, url, width, height)
+                
+                # Calcular el tiempo que tomó la captura
+                elapsed_time = time.time() - start_time
+                
+                # Actualizar la barra de progreso
+                for i in range(10):  # 10 pasos para la barra de progreso
+                    progress = (completed_tasks + (i + 1) / 10) / total_tasks
+                    progress_placeholder.progress(round(progress, 2))
+                    time.sleep(elapsed_time / 10)  # Sincronizar con el tiempo de captura
                     
-                    message = random.choice(LOADING_MESSAGES)
-                    status_placeholder.markdown(f"<h3 style='text-align: center'>🎯 Procesando URL {url_idx + 1} de {len(st.session_state.urls_queue)}</h3>", unsafe_allow_html=True)
-                    message_placeholder.markdown(f"<p style='text-align: center'>{message}</p>", unsafe_allow_html=True)
-                    
-                    # Capturar screenshot
-                    width, height = RESOLUTIONS[resolution_name]
-                    status = st.status(f"📸 {url} - {resolution_name}", expanded=False)
-                    status.update(label=f"⏳ Capturando {resolution_name}...", state="running")
-                    
-                    screenshot = capture_screenshot(driver, url, width, height)
-                    if screenshot:
-                        st.session_state.screenshots_data[url][resolution_name] = screenshot
-                        status.update(label=f"✨ {resolution_name} capturada exitosamente", state="complete")
-                    else:
-                        status.update(label=f"❌ Error al capturar {resolution_name}", state="error")
-                    
-                    completed_tasks += 1
-                    time.sleep(0.1)  # Pequeña pausa para ver la animación
+                    # Cambiar el mensaje de carga
+                    message_placeholder.markdown(f"<p style='text-align: center'>{random.choice(loading_messages)}</p>", unsafe_allow_html=True)
+                
+                if screenshot:
+                    st.session_state.screenshots_data[url][resolution_name] = screenshot
+                completed_tasks += 1
             
             if completed_tasks > 0:
                 # Mostrar progreso final
                 progress_placeholder.progress(1.0)
-                status_placeholder.markdown("<h3 style='text-align: center'>✨ ¡Proceso completado!</h3>", unsafe_allow_html=True)
                 message_placeholder.markdown("<p style='text-align: center'>Todas las capturas han sido procesadas exitosamente</p>", unsafe_allow_html=True)
                 
                 # Efectos de celebración

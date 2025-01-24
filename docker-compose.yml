@@ -1,0 +1,19 @@
+services:
+  dev:
+    image: screenshot-app-dev
+    build: .
+    ports:
+      - "8502:8501"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: sh -c "streamlit run app.py"
+
+  prod:
+    image: screenshot-app-prod
+    build: .
+    ports:
+      - "8503:8501"
+    environment:
+      - PYTHONUNBUFFERED=1 
