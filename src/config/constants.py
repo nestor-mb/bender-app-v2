@@ -21,6 +21,13 @@ CHROME_OPTIONS = [
     "--log-level=3",
     "--ignore-certificate-errors",
     "--window-size=1920,1080",
+
+    # Opcional para camuflar más el navegador:
+    "--disable-blink-features=AutomationControlled",
+
+    # Ejemplo de cambiar el user agent a uno "común"
+    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
 ]
 
 # Page configuration
