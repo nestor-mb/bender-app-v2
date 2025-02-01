@@ -60,7 +60,7 @@ def capture_screenshot(_driver, url, width, height):
         _driver.get(url)
 
         # Wait for the page to load fully
-        time.sleep(3)
+        time.sleep(10)
 
         # Handle cookies pop-up if present
         try:
