@@ -9,7 +9,7 @@ RESOLUTIONS = {
 
 # Chrome options for webdriver
 CHROME_OPTIONS = [
-   # "--headless=new",#
+    "--headless=new",
     "--no-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
