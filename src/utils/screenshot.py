@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium_stealth import stealth
 import streamlit as st
 from PIL import Image
 from io import BytesIO
@@ -17,7 +18,6 @@ from ..config.constants import CHROME_OPTIONS
 def setup_webdriver():
     """Setup and return configured Chrome webdriver"""
     try:
-        # Intentar instalar ChromeDriver
         chromedriver_autoinstaller.install()
     except Exception as e:
         st.warning(f"No se pudo instalar ChromeDriver automáticamente. Usando configuración por defecto.")
@@ -27,12 +27,26 @@ def setup_webdriver():
         options.add_argument(option)
     
     try:
-        # Intentar crear el driver con la configuración por defecto
-        return webdriver.Chrome(options=options)
+        # Primero creas el driver con las opciones
+        driver = webdriver.Chrome(options=options)
+        
+        # Luego aplicas stealth
+        stealth(
+            driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
+
+        return driver
     except Exception as e:
         st.error(f"Error al inicializar Chrome: {str(e)}")
         st.info("Asegúrate de que Chrome y ChromeDriver estén instalados en el servidor.")
         return None
+
 
 @st.cache_data
 def capture_screenshot(_driver, url, width, height):
